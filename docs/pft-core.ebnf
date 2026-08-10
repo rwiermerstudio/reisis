@@ -1,0 +1,82 @@
+(* ABCD/CISIS Language Studio: abcd-cisis / milestone 4 *)
+
+program         = { separator | expression } ;
+expression      = field | dummy | literal | layout | mode | system_value |
+                  function | variable | assignment | comment | control |
+                  group | conditional | select | while ;
+
+field           = ( "v" | "V" ), tag, [ subfield ], [ occurrence ],
+                  [ extraction ], [ indentation ] ;
+dummy           = ( "d" | "D" | "n" | "N" ), tag, [ subfield ] ;
+tag             = digit, { digit } ;
+subfield        = "^", code ;
+code            = letter | digit ;
+occurrence      = "[", ( positive_integer, [ "..", [ positive_integer | "LAST" ] ] | "LAST" ), "]" ;
+extraction      = "*", digit, { digit }, [ ".", digit, { digit } ] ;
+indentation     = "(", positive_integer, ",", positive_integer, ")" ;
+
+literal         = single_literal | double_literal | pipe_literal ;
+single_literal  = "'", { single_character }, "'" ;
+double_literal  = '"', { double_character }, '"' ;
+pipe_literal    = "|", { pipe_character }, "|" ;
+layout          = "/" | "#" | "%" | spacing | column |
+                  "lw", "(", positive_integer, ")" ;
+mode            = "mpl" | "mpu" | "mhl" | "mhu" | "mdl" | "mdu" ;
+spacing         = ( "x" | "X" ), positive_integer ;
+column          = ( "c" | "C" ), positive_integer ;
+
+system_value    = mfn | iocc | nocc ;
+mfn             = ( "mfn" | "MFN" ), [ "(", positive_integer, ")" ] ;
+iocc            = "iocc" | "IOCC" ;
+nocc            = ( "nocc" | "NOCC" ), "(", field_reference, ")" ;
+field_reference = ( "v" | "V" ), tag, [ subfield ] ;
+
+comment         = "/*", { comment_character }, "*/" ;
+
+group           = "(", { separator | expression }, ")" ;
+
+conditional     = "if", boolean_expression, "then", sequence,
+                  [ "else", sequence ], "fi" ;
+control         = "break" | "continue" ;
+variable        = ( "e" | "s" ), digit ;
+assignment      = variable, ":=", ( boolean_expression | "(", sequence, ")" ) ;
+while           = "while", boolean_expression, "(", sequence, ")" ;
+select          = "select", boolean_expression,
+                  { "case", primary, ":", sequence },
+                  [ "elsecase", sequence ], "endsel" ;
+sequence        = { separator | expression } ;
+
+boolean_expression = boolean_term, { "or", boolean_term } ;
+boolean_term    = comparison, { "and", comparison } ;
+comparison      = additive, [ comparison_operator, additive ] ;
+comparison_operator = "=" | "==" | "<>" | "!=" | "<" | "<=" | ">" | ">=" ;
+additive        = product, { ( "+" | "-" ), product } ;
+product         = unary, { ( "*" | "/" ), unary } ;
+unary           = [ "not" | "+" | "-" ], primary ;
+primary         = number | string | field | "mfn" | "iocc" | function |
+                  "(", boolean_expression, ")" ;
+function        = function_name, "(", [ boolean_expression,
+                  { ",", boolean_expression } ], ")" ;
+function_name   = "p" | "a" | "nocc" | "size" | "instr" | "val" |
+                  "left" | "right" | "mid" | "replace" | "f" | "s" |
+                  "date" | "rsum" | "rmin" | "rmax" | "ravr" ;
+string          = single_literal | double_literal ;
+number          = digit, { digit }, [ ".", digit, { digit } ] ;
+
+separator       = whitespace | "," ;
+positive_integer = nonzero_digit, { digit } ;
+digit           = "0" | nonzero_digit ;
+nonzero_digit   = "1" | "2" | "3" | "4" | "5" |
+                  "6" | "7" | "8" | "9" ;
+letter          = "a" | "b" | "c" | "d" | "e" | "f" | "g" |
+                  "h" | "i" | "j" | "k" | "l" | "m" | "n" |
+                  "o" | "p" | "q" | "r" | "s" | "t" | "u" |
+                  "v" | "w" | "x" | "y" | "z" ;
+whitespace      = " " | "\t" | "\r" | "\n" ;
+
+(* Keywords and subfield codes are case-insensitive. Character productions
+   exclude their corresponding closing delimiter. Single, double, and pipe
+   delimiters are retained in the AST as unconditional, conditional, and
+   repeatable-conditional literal kinds respectively. Conditional literals are
+   associated with an adjacent field. Double-quoted text is emitted only for
+   its first group occurrence; pipe-delimited text may repeat. *)

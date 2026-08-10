@@ -1,0 +1,22 @@
+(* ABCD/CISIS Language Studio: abcd-cisis FST milestone 3 *)
+
+table           = { blank_line | comment_line | row, line_end } ;
+row             = target_tag, spacing, technique, spacing, pft_program ;
+target_tag      = integer ;
+technique       = "0" | "1" | "2" | "3" | "4" |
+                  "5" | "6" | "7" | "8" ;
+pft_program     = ? a program conforming to pft-core.ebnf ? ;
+
+comment_line    = optional_spacing, "#", { character } ;
+blank_line      = optional_spacing, line_end ;
+spacing         = whitespace, { whitespace } ;
+optional_spacing = { whitespace } ;
+integer         = digit, { digit } ;
+digit           = "0" | "1" | "2" | "3" | "4" |
+                  "5" | "6" | "7" | "8" | "9" ;
+whitespace      = " " | "\t" ;
+line_end        = "\n" | end_of_input ;
+
+(* Techniques: 0 line, 1 subfield/line, 2 <angle phrase>, 3 /slash phrase/,
+   and 4 word. Techniques 5-8 apply a delimiter-wrapped prefix and then use
+   the extraction behavior of techniques 1-4 respectively. *)

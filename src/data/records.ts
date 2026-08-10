@@ -120,7 +120,7 @@ export const records: IsisRecord[] = [
 
 export const starterPft = `v245^a, " / ", v100^a, /,
 if p(v260) then "Published: ", v260^b, " (", v260^c, ")" fi, /,
-"Subjects: ", (v650^a, |; |)`;
+'Subjects: ', (v650^a, |; |)`;
 
 export const starterFst = `10 0 v20
 20 4 v245^a
