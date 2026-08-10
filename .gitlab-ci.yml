@@ -1,0 +1,25 @@
+stages:
+  - verify
+  - package
+
+verify_application:
+  stage: verify
+  image: node:22-alpine
+  script:
+    - npm ci
+    - npm test -- --run
+    - npm run build
+
+package_skill:
+  stage: package
+  image: python:3.13-alpine
+  needs:
+    - verify_application
+  script:
+    - python3 scripts/package_skill.py
+  artifacts:
+    name: "abcd-cisis-pft-fst-$CI_COMMIT_SHORT_SHA"
+    expose_as: "ABCD/CISIS skill ZIP"
+    paths:
+      - artifacts/abcd-cisis-pft-fst.zip
+    expire_in: 90 days

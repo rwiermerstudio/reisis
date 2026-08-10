@@ -1,6 +1,6 @@
 ---
 name: abcd-cisis-pft-fst
-description: Create, explain, review, translate, and debug ABCD/CISIS PFT display formats and FST field selection tables. Use when requests mention ABCD, CISIS, CDS/ISIS, PFT, print or display formats, FST, indexing techniques, v-tag selectors, conditional or repeatable literals, format diagnostics, or converting natural-language catalog display/indexing requirements into code and back.
+description: Create, explain, review, and debug ABCD/CISIS PFT display formats and FST indexing tables. Use for CDS/ISIS formatting, v-tag selectors, repetition, literals, indexing techniques, or format errors.
 ---
 
 # ABCD/CISIS PFT and FST

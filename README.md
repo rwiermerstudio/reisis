@@ -74,3 +74,15 @@ The portable `skills/abcd-cisis-pft-fst` skill teaches compatible language-model
 agents to create, explain, review, and debug ABCD/CISIS PFT and FST code. Invoke
 it as `$abcd-cisis-pft-fst` in clients that support Agent Skills, or provide its
 `SKILL.md` and focused references as context to another language model.
+
+Create an upload-ready ZIP locally with:
+
+```sh
+npm run package:skill
+```
+
+The command writes `artifacts/abcd-cisis-pft-fst.zip` with the named skill
+folder at the archive root. GitLab CI exposes this file from the `package_skill`
+job for 90 days. The GitHub Pages workflow also uploads it as a workflow
+artifact; extract the GitHub artifact wrapper and upload the contained skill ZIP
+to Claude or another Agent Skills client.

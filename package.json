@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "package:skill": "python3 scripts/package_skill.py",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc -b --pretty false"

@@ -36,6 +36,17 @@ jobs:
       - name: Build static site
         run: npm run build
 
+      - name: Package ABCD/CISIS skill
+        run: python3 scripts/package_skill.py
+
+      - name: Upload skill ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: abcd-cisis-pft-fst-${{ github.sha }}
+          path: artifacts/abcd-cisis-pft-fst.zip
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
