@@ -642,12 +642,14 @@ function App() {
   useEffect(() => {
     if (!importedDataset) return;
     setDatasetMode('imported');
-    setWorkspaceMode('playground');
-    setCurrentLesson(undefined);
-    setSelectedPreset(undefined);
-    setRecordIndex(0);
-    setRecordSource(toRecordSource(importedDataset.records[0]));
-  }, [importedDataset]);
+    if (marcImport.state.datasetSource === 'import' || workspaceMode === 'playground') {
+      setWorkspaceMode('playground');
+      setCurrentLesson(undefined);
+      setSelectedPreset(undefined);
+      setRecordIndex(0);
+      setRecordSource(toRecordSource(importedDataset.records[0]));
+    }
+  }, [importedDataset, marcImport.state.datasetSource]);
 
   useEffect(() => {
     if (mode === 'fst' && ['rendered', 'html', 'validation'].includes(tab)) setTab('output');
@@ -683,8 +685,8 @@ function App() {
     chooseRecordFrom(items, 0);
   };
 
-  const clearImportedDataset = () => {
-    marcImport.clear();
+  const clearImportedDataset = async () => {
+    if (!await marcImport.clear()) return;
     setDatasetMode('demo');
     chooseRecordFrom(demoRecords, 0);
   };
@@ -771,7 +773,7 @@ function App() {
             <section className={`dataset-bar ${marcImport.state.status === 'error' ? 'error' : ''}`}>
               <div className="dataset-summary">
                 <Database size={16} />
-                <span><strong>{datasetMode === 'imported' && importedDataset ? importedDataset.name : 'Demo dataset'}</strong><small>{activeRecords.length.toLocaleString()} records{importedDataset && datasetMode === 'imported' ? ` / ${importedDataset.format.toUpperCase()}` : ' / bundled'}</small></span>
+                <span><strong>{datasetMode === 'imported' && importedDataset ? importedDataset.name : 'Demo dataset'}</strong><small>{activeRecords.length.toLocaleString()} records{importedDataset && datasetMode === 'imported' ? ` / ${importedDataset.format.toUpperCase()}${marcImport.state.status === 'saving' ? ' / saving' : marcImport.state.error?.code.startsWith('DATASET_STORAGE') ? ' / storage error' : ' / saved locally'}` : ' / bundled'}</small></span>
               </div>
               <div className="dataset-actions">
                 {importedDataset && (
@@ -784,7 +786,7 @@ function App() {
                     <ChevronDown size={13} />
                   </label>
                 )}
-                <button className="import-button" disabled={['reading', 'parsing'].includes(marcImport.state.status)} onClick={() => importInput.current?.click()}><Upload size={14} />Import MARC</button>
+                <button className="import-button" disabled={['restoring', 'reading', 'parsing', 'saving', 'clearing'].includes(marcImport.state.status)} onClick={() => importInput.current?.click()}><Upload size={14} />Import MARC</button>
                 <input
                   ref={importInput}
                   className="visually-hidden"
@@ -797,10 +799,10 @@ function App() {
                   }}
                   aria-label="MARC file"
                 />
-                {importedDataset && <button className="clear-dataset" title="Remove imported dataset" onClick={clearImportedDataset}><X size={14} /></button>}
+                {importedDataset && <button className="clear-dataset" disabled={['reading', 'parsing', 'saving', 'clearing'].includes(marcImport.state.status)} title="Remove imported dataset" onClick={() => void clearImportedDataset()}><X size={14} /></button>}
               </div>
-              {['reading', 'parsing'].includes(marcImport.state.status) && (
-                <div className="import-status"><span style={{ width: `${marcImport.state.progress * 100}%` }} /><strong>{marcImport.state.status === 'reading' ? 'Reading file' : `Parsing ${Math.round(marcImport.state.progress * 100)}%`}</strong><button onClick={marcImport.cancel}>Cancel</button></div>
+              {['restoring', 'reading', 'parsing', 'saving', 'clearing'].includes(marcImport.state.status) && (
+                <div className="import-status"><span style={{ width: `${marcImport.state.progress * 100}%` }} /><strong>{marcImport.state.status === 'restoring' ? 'Restoring saved dataset' : marcImport.state.status === 'reading' ? 'Reading file' : marcImport.state.status === 'parsing' ? `Parsing ${Math.round(marcImport.state.progress * 100)}%` : marcImport.state.status === 'saving' ? 'Saving locally' : 'Removing saved dataset'}</strong>{['reading', 'parsing'].includes(marcImport.state.status) && <button onClick={marcImport.cancel}>Cancel</button>}</div>
               )}
               {marcImport.state.error && <div className="import-message"><AlertCircle size={14} /><strong>{marcImport.state.error.code}</strong><span>{marcImport.state.error.message}</span></div>}
               {datasetMode === 'imported' && importedDataset && importedDataset.warnings.length > 0 && <div className="import-message warning"><AlertCircle size={14} /><strong>{importedDataset.warnings.length.toLocaleString()} warnings</strong><span>{importedDataset.warnings[0].message}</span></div>}

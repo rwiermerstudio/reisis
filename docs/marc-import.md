@@ -1,8 +1,8 @@
 # MARC import
 
 The Playground can load MARCXML and ISO2709 MARC files without sending data to
-a server. Imported datasets remain in browser memory and are removed on reload
-or when the user clears the dataset.
+a server. Imported datasets are kept in browser memory while in use and saved
+to IndexedDB for restoration after reload.
 
 ## Supported input
 
@@ -30,6 +30,18 @@ number field `001` remains an ordinary field and is not used as the MFN.
 Lessons always use the deterministic bundled records. Imported datasets apply
 only to the Playground, where they can be evaluated as one record or as a
 worker-based batch.
+
+## Local persistence
+
+The application stores one imported dataset per site origin. Metadata and
+warnings are stored separately from record data, which is split into chunks of
+250 records. Replacement clears and writes all chunks in one IndexedDB
+transaction, preventing a partially replaced dataset from becoming active.
+
+The dataset picker can switch between bundled and imported records. Removing
+the imported dataset clears its metadata and every record chunk. Storage quota,
+private-browsing restrictions, and other IndexedDB failures are reported in the
+dataset bar while the in-memory import remains usable when possible.
 
 ## Processing model
 

@@ -117,12 +117,29 @@ describe('studio workflow', () => {
     fireEvent.change(screen.getByLabelText('MARC file'), { target: { files: [file] } });
 
     await waitFor(() => expect(screen.getByText('catalog.xml')).toBeInTheDocument());
-    expect(screen.getByText('2 records / MARCXML')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('2 records / MARCXML / saved locally')).toBeInTheDocument());
     expect(screen.getAllByText(/Imported title one/).length).toBeGreaterThan(0);
     expect(screen.getAllByTitle('MARC indicators').some((item) => item.textContent === '10')).toBe(true);
     fireEvent.change(screen.getByLabelText('Record position'), { target: { value: '2' } });
     expect(screen.getAllByText(/Imported title two/).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /All 2/ })).toBeInTheDocument();
+  });
+
+  it('restores an imported dataset after the application remounts', async () => {
+    const first = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
+    const source = '<record xmlns="http://www.loc.gov/MARC21/slim"><leader>00000nam a2200000 a 4500</leader><datafield tag="245" ind1="1" ind2="0"><subfield code="a">Restored title</subfield></datafield></record>';
+    const file = new File([source], 'persistent.xml', { type: 'application/xml' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => new TextEncoder().encode(source).buffer });
+    fireEvent.change(screen.getByLabelText('MARC file'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByText('1 records / MARCXML / saved locally')).toBeInTheDocument());
+    first.unmount();
+
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
+
+    await waitFor(() => expect(screen.getByText('persistent.xml')).toBeInTheDocument());
+    expect(screen.getAllByText(/Restored title/).length).toBeGreaterThan(0);
   });
 
   it('keeps the playground visible for an incomplete variable assignment', () => {
