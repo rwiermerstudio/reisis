@@ -96,6 +96,14 @@ interface CodeEditorProps {
   completions: CompletionItem[];
 }
 
+function pftCommentContext(source: string, cursor: number): 'none' | 'open' | 'closed' {
+  const open = source.lastIndexOf('/*', cursor);
+  if (open < 0) return 'none';
+  const close = source.indexOf('*/', open + 2);
+  if (close >= 0) return cursor <= close + 2 ? 'closed' : 'none';
+  return open > source.lastIndexOf('*/', cursor) ? 'open' : 'none';
+}
+
 function CodeEditor({ value, mode, onChange, diagnostics, selection, onSelectionHandled, completions }: CodeEditorProps) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const backdrop = useRef<HTMLPreElement>(null);
@@ -104,10 +112,13 @@ function CodeEditor({ value, mode, onChange, diagnostics, selection, onSelection
 
   const completionContext = (cursor: number, explicit = false, currentValue = value) => {
     if (mode === 'pft') {
-      const openComment = currentValue.lastIndexOf('/*', cursor);
-      const previousClose = currentValue.lastIndexOf('*/', cursor);
-      const closingComment = openComment >= 0 ? currentValue.indexOf('*/', openComment + 2) : -1;
-      if (openComment > previousClose && closingComment < 0) {
+      const commentContext = pftCommentContext(currentValue, cursor);
+      if (commentContext === 'closed') {
+        setCompletionState(undefined);
+        return;
+      }
+      if (commentContext === 'open') {
+        const openComment = currentValue.lastIndexOf('/*', cursor);
         const needsSpace = cursor > openComment + 2 && !/\s/.test(currentValue[cursor - 1] ?? '');
         const item: CompletionItem = {
           label: 'Close comment',
@@ -181,6 +192,10 @@ function CodeEditor({ value, mode, onChange, diagnostics, selection, onSelection
             event.preventDefault();
             setCompletionIndex((index) => (index - 1 + completionState.items.length) % completionState.items.length);
           } else if (event.key === 'Enter' || event.key === 'Tab') {
+            if (mode === 'pft' && pftCommentContext(value, event.currentTarget.selectionStart) === 'closed') {
+              setCompletionState(undefined);
+              return;
+            }
             event.preventDefault();
             applyCompletion(completionState.items[completionIndex]);
           } else if (event.key === 'Escape') {

@@ -77,6 +77,33 @@ describe('studio workflow', () => {
     expect(editor).toHaveValue('/* explain this */');
   });
 
+  it('does not complete a comment that is already closed', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
+    loadBlankPft();
+    const editor = screen.getByLabelText('PFT source editor');
+    fireEvent.change(editor, { target: { value: '/* This is a comment', selectionStart: 20 } });
+    fireEvent.keyDown(editor, { code: 'Space', ctrlKey: true });
+    expect(screen.getByRole('option', { name: /Close comment/ })).toBeInTheDocument();
+
+    fireEvent.change(editor, { target: { value: '/* This is a comment */', selectionStart: 23 } });
+    fireEvent.keyDown(editor, { key: 'Enter', code: 'Enter' });
+
+    expect(editor).toHaveValue('/* This is a comment */');
+    expect(screen.queryByRole('listbox', { name: 'Code completions' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer completions inside a completed comment', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
+    loadBlankPft();
+    const editor = screen.getByLabelText('PFT source editor');
+    fireEvent.change(editor, { target: { value: '/* This is a comment */', selectionStart: 23 } });
+    fireEvent.keyDown(editor, { code: 'Space', ctrlKey: true });
+
+    expect(screen.queryByRole('listbox', { name: 'Code completions' })).not.toBeInTheDocument();
+  });
+
   it('keeps the playground visible for an incomplete variable assignment', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
