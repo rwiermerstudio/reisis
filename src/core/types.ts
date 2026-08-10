@@ -1,6 +1,11 @@
 export interface IsisRecord {
   mfn: number;
   fields: Record<string, string[]>;
+  marc?: {
+    sourceFormat: 'marcxml' | 'iso2709';
+    leader?: string;
+    indicators: Record<string, string[]>;
+  };
 }
 
 export interface SourceSpan {

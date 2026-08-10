@@ -24,6 +24,8 @@ describe('record model goldens', () => {
     '{"mfn":1,"fields":{"bad-tag":[]}}',
     '{"mfn":1,"fields":{"245":"title"}}',
     '{"mfn":1,"fields":{"245":[1]}}',
+    '{"mfn":1,"fields":{},"marc":{}}',
+    '{"mfn":1,"fields":{},"marc":{"sourceFormat":"marcxml","indicators":{"245":["1"]}}}',
     'null',
     '"record"',
   ])('rejects invalid record %s', (source) => {

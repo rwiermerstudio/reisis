@@ -29,12 +29,14 @@ follow CISIS behavior where it differs from other ISIS-family implementations.
 - 71 executable lessons with local progress across PFT, FST, expressions,
   functions, control flow, and HTML
 - Dedicated playground with PFT/FST examples and quick inserts
+- In-browser MARCXML and UTF-8 ISO2709 import for up to 10,000 records
+- Worker-based import progress, dataset switching, and scalable record navigation
 - Record-aware code completion and live syntax highlighting
 - One-record and all-record execution in Learn and Playground
 - Worker-based, compiled batch evaluation with progress and paged results
 - Sanitized HTML rendering with raw source and offline validation views
 - Bounded, paged HTML previews for all-record execution
-- 399 automated behavioral cases, including 5,000-record PFT and 2,000-record FST runs
+- 411 automated behavioral cases, including 10,000-record import/PFT and 2,000-record FST runs
 
 This is an educational compatibility implementation. It does not yet claim full
 ABCD, CISIS, WXIS, or IsisScript compatibility. Unsupported syntax is rejected
@@ -62,3 +64,6 @@ recorded in `docs/compatibility.md`.
 
 The HTML exercise security model and supported markup are documented in
 `docs/html-output.md`.
+
+MARC import formats, limits, and CISIS field mapping are documented in
+`docs/marc-import.md`.

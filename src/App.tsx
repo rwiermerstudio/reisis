@@ -22,6 +22,8 @@ import {
   ShieldCheck,
   TableProperties,
   TerminalSquare,
+  Upload,
+  X,
 } from 'lucide-react';
 import { evaluateFst } from './core/fst';
 import { analyzeHtml, type HtmlAnalysis } from './core/html';
@@ -30,9 +32,10 @@ import { evaluatePft } from './core/pft';
 import { displayField, parseRecordJson } from './core/record';
 import type { Diagnostic, IsisRecord, SourceSpan } from './core/types';
 import { useBatchEvaluation, type BatchEvaluationState } from './hooks/useBatchEvaluation';
+import { useMarcImport } from './hooks/useMarcImport';
 import { lessonModules, lessons, orderedLessons, type Lesson, type LessonMode } from './data/lessons';
 import { playgroundPresets, quickInserts, type PlaygroundPreset } from './data/playground';
-import { records, starterFst, starterPft } from './data/records';
+import { records as demoRecords, starterFst, starterPft } from './data/records';
 
 type ResultTab = 'output' | 'rendered' | 'html' | 'validation' | 'trace' | 'ast';
 type WorkspaceMode = 'learn' | 'playground';
@@ -465,7 +468,7 @@ function RecordInspector({ record, source, onSourceChange }: { record?: IsisReco
   return (
     <section className="panel record-panel">
       <header className="panel-header">
-        <div className="panel-title"><Database size={16} /><span>Record</span>{record && <b>MFN {record.mfn}</b>}</div>
+        <div className="panel-title"><Database size={16} /><span>Record</span>{record && <b>MFN {record.mfn}{record.marc ? ` / ${record.marc.sourceFormat.toUpperCase()}` : ''}</b>}</div>
         <div className="mini-tabs" role="tablist">
           <button className={view === 'fields' ? 'active' : ''} onClick={() => setView('fields')}>Fields</button>
           <button className={view === 'json' ? 'active' : ''} onClick={() => setView('json')}>JSON</button>
@@ -479,9 +482,10 @@ function RecordInspector({ record, source, onSourceChange }: { record?: IsisReco
       ) : (
         <div className="field-table">
           {record ? Object.entries(record.fields).map(([tag, occurrences]) => occurrences.map((value, index) => (
-            <div className="field-row" key={`${tag}-${index}`}>
+            <div className={`field-row ${record.marc ? 'marc-field' : ''}`} key={`${tag}-${index}`}>
               <span className="tag">{tag}</span>
               <span className="occurrence">{index + 1}</span>
+              {record.marc && <span className="indicator" title="MARC indicators">{record.marc.indicators[tag]?.[index]?.replace(/ /g, '#') ?? '--'}</span>}
               <span>{displayField(value)}</span>
             </div>
           ))) : <div className="empty-state">Fix the record JSON to inspect its fields.</div>}
@@ -559,7 +563,7 @@ function App() {
     const id = Number(initialParams.get('lesson'));
     return lessons.find((lesson) => lesson.id === id);
   }, [initialParams]);
-  const initialRecordIndex = initialLesson ? records.findIndex((item) => item.mfn === initialLesson.recordMfn) : 0;
+  const initialRecordIndex = initialLesson ? demoRecords.findIndex((item) => item.mfn === initialLesson.recordMfn) : 0;
   const showInitialSolution = initialParams.get('solution') === '1';
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() =>
     !initialLesson && initialParams.get('workspace') === 'playground' ? 'playground' : 'learn',
@@ -571,7 +575,7 @@ function App() {
     initialParams.get('scope') === 'all' ? 'all' : 'current',
   );
   const [recordIndex, setRecordIndex] = useState(initialRecordIndex);
-  const [recordSource, setRecordSource] = useState(toRecordSource(records[initialRecordIndex]));
+  const [recordSource, setRecordSource] = useState(toRecordSource(demoRecords[initialRecordIndex]));
   const [pft, setPft] = useState(initialLesson?.mode === 'pft' ? (showInitialSolution ? initialLesson.solution : initialLesson.starter) : starterPft);
   const [fst, setFst] = useState(initialLesson?.mode === 'fst' ? (showInitialSolution ? initialLesson.solution : initialLesson.starter) : starterFst);
   const [tab, setTab] = useState<ResultTab>(initialLesson?.output === 'html' ? 'rendered' : 'output');
@@ -580,16 +584,22 @@ function App() {
   const [selection, setSelection] = useState<SourceSpan>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [batchPage, setBatchPage] = useState(0);
+  const [datasetMode, setDatasetMode] = useState<'demo' | 'imported'>('demo');
+  const importInput = useRef<HTMLInputElement>(null);
+  const marcImport = useMarcImport();
   const [complete, setComplete] = useState<Set<number>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('isis-studio-progress') ?? '[]') as number[]); }
     catch { return new Set(); }
   });
 
+  const importedDataset = marcImport.state.dataset;
+  const playgroundRecords = datasetMode === 'imported' && importedDataset ? importedDataset.records : demoRecords;
+  const activeRecords = workspaceMode === 'learn' ? demoRecords : playgroundRecords;
   const parsedRecord = useMemo(() => parseRecordJson(recordSource), [recordSource]);
   const record = parsedRecord.record;
   const evaluationRecords = useMemo(
-    () => records.map((item, index) => index === recordIndex && record ? record : item),
-    [record, recordIndex],
+    () => activeRecords.map((item, index) => index === recordIndex && record ? record : item),
+    [activeRecords, record, recordIndex],
   );
   const pftResult = useMemo(() => record ? evaluatePft(pft, record) : undefined, [pft, record]);
   const fstResult = useMemo(() => record ? evaluateFst(fst, record) : undefined, [fst, record]);
@@ -630,6 +640,16 @@ function App() {
   useEffect(() => setBatchPage(0), [mode, recordScope, source]);
 
   useEffect(() => {
+    if (!importedDataset) return;
+    setDatasetMode('imported');
+    setWorkspaceMode('playground');
+    setCurrentLesson(undefined);
+    setSelectedPreset(undefined);
+    setRecordIndex(0);
+    setRecordSource(toRecordSource(importedDataset.records[0]));
+  }, [importedDataset]);
+
+  useEffect(() => {
     if (mode === 'fst' && ['rendered', 'html', 'validation'].includes(tab)) setTab('output');
   }, [mode, tab]);
 
@@ -640,17 +660,41 @@ function App() {
     localStorage.setItem('isis-studio-progress', JSON.stringify([...next]));
   }, [complete, currentLesson, lessonPassed]);
 
-  const chooseRecord = (index: number) => {
-    setRecordIndex(index);
-    setRecordSource(toRecordSource(records[index]));
+  const chooseRecordFrom = (items: IsisRecord[], index: number) => {
+    const nextIndex = Math.max(0, Math.min(index, items.length - 1));
+    setRecordIndex(nextIndex);
+    setRecordSource(toRecordSource(items[nextIndex]));
+  };
+
+  const chooseRecord = (index: number) => chooseRecordFrom(activeRecords, index);
+
+  const switchWorkspace = (next: WorkspaceMode) => {
+    setWorkspaceMode(next);
+    const items = next === 'learn' ? demoRecords : playgroundRecords;
+    const preferredMfn = next === 'learn' ? currentLesson?.recordMfn : undefined;
+    const preferredIndex = preferredMfn === undefined ? 0 : items.findIndex((item) => item.mfn === preferredMfn);
+    chooseRecordFrom(items, preferredIndex < 0 ? 0 : preferredIndex);
+  };
+
+  const switchDataset = (next: 'demo' | 'imported') => {
+    setDatasetMode(next);
+    setWorkspaceMode('playground');
+    const items = next === 'imported' && importedDataset ? importedDataset.records : demoRecords;
+    chooseRecordFrom(items, 0);
+  };
+
+  const clearImportedDataset = () => {
+    marcImport.clear();
+    setDatasetMode('demo');
+    chooseRecordFrom(demoRecords, 0);
   };
 
   const loadLesson = (lesson: Lesson) => {
     setWorkspaceMode('learn');
     setCurrentLesson(lesson);
     setMode(lesson.mode);
-    const index = records.findIndex((item) => item.mfn === lesson.recordMfn);
-    chooseRecord(index);
+    const index = demoRecords.findIndex((item) => item.mfn === lesson.recordMfn);
+    chooseRecordFrom(demoRecords, index);
     if (lesson.mode === 'pft') setPft(lesson.starter);
     else setFst(lesson.starter);
     setTab(lesson.output === 'html' ? 'rendered' : 'output');
@@ -661,8 +705,8 @@ function App() {
     setWorkspaceMode('playground');
     setSelectedPreset(preset.id);
     setMode(preset.mode);
-    const index = records.findIndex((item) => item.mfn === preset.recordMfn);
-    chooseRecord(index);
+    const index = activeRecords.findIndex((item) => item.mfn === preset.recordMfn);
+    chooseRecordFrom(activeRecords, index < 0 ? 0 : index);
     if (preset.mode === 'pft') setPft(preset.source);
     else setFst(preset.source);
     setTab('output');
@@ -692,15 +736,20 @@ function App() {
       <header className="topbar">
         <div className="brand"><div className="brand-mark">AB</div><div><strong>ABCD/CISIS Language Studio</strong><span>CISIS PFT + FST workbench</span></div></div>
         <div className="workspace-switch" role="tablist" aria-label="Workspace mode">
-          <button className={workspaceMode === 'learn' ? 'active' : ''} onClick={() => setWorkspaceMode('learn')}><BookOpen size={14} />Learn</button>
-          <button className={workspaceMode === 'playground' ? 'active' : ''} onClick={() => setWorkspaceMode('playground')}><Beaker size={14} />Playground</button>
+          <button className={workspaceMode === 'learn' ? 'active' : ''} onClick={() => switchWorkspace('learn')}><BookOpen size={14} />Learn</button>
+          <button className={workspaceMode === 'playground' ? 'active' : ''} onClick={() => switchWorkspace('playground')}><Beaker size={14} />Playground</button>
         </div>
         <div className="top-actions">
           <button className="mobile-lessons" onClick={() => setSidebarOpen(!sidebarOpen)}>{workspaceMode === 'learn' ? <BookOpen size={16} /> : <Beaker size={16} />}{workspaceMode === 'learn' ? 'Lessons' : 'Examples'}</button>
-          <label className="record-select"><span>RECORD</span><select value={recordIndex} onChange={(event) => chooseRecord(Number(event.target.value))}>{records.map((item, index) => <option key={item.mfn} value={index}>MFN {item.mfn}</option>)}</select><ChevronDown size={14} /></label>
+          <div className="record-navigator" aria-label="Record navigation">
+            <button title="Previous record" disabled={recordIndex === 0} onClick={() => chooseRecord(recordIndex - 1)}><ChevronLeft size={14} /></button>
+            <label><span>RECORD</span><input aria-label="Record position" type="number" min={1} max={activeRecords.length} value={recordIndex + 1} onChange={(event) => event.target.value && chooseRecord(Number(event.target.value) - 1)} /></label>
+            <small>/ {activeRecords.length.toLocaleString()}</small>
+            <button title="Next record" disabled={recordIndex + 1 >= activeRecords.length} onClick={() => chooseRecord(recordIndex + 1)}><ChevronRight size={14} /></button>
+          </div>
           <div className="scope-switch" role="tablist" aria-label="Record scope">
             <button className={recordScope === 'current' ? 'active' : ''} onClick={() => setRecordScope('current')}>One</button>
-            <button className={recordScope === 'all' ? 'active' : ''} onClick={() => setRecordScope('all')}><Files size={13} />All <span>{records.length}</span></button>
+            <button className={recordScope === 'all' ? 'active' : ''} onClick={() => setRecordScope('all')}><Files size={13} />All <span>{activeRecords.length.toLocaleString()}</span></button>
           </div>
           <div className="mode-switch" role="tablist" aria-label="Language mode">
             <button className={mode === 'pft' ? 'active' : ''} onClick={() => { setMode('pft'); if (workspaceMode === 'playground') setSelectedPreset(undefined); }}>PFT</button>
@@ -718,6 +767,45 @@ function App() {
           ? <LessonList current={currentLesson?.id} complete={complete} onSelect={loadLesson} />
           : <PlaygroundSidebar mode={mode} selected={selectedPreset} onSelect={loadPreset} onInsert={insertQuick} />}
         <main className="workbench">
+          {workspaceMode === 'playground' && (
+            <section className={`dataset-bar ${marcImport.state.status === 'error' ? 'error' : ''}`}>
+              <div className="dataset-summary">
+                <Database size={16} />
+                <span><strong>{datasetMode === 'imported' && importedDataset ? importedDataset.name : 'Demo dataset'}</strong><small>{activeRecords.length.toLocaleString()} records{importedDataset && datasetMode === 'imported' ? ` / ${importedDataset.format.toUpperCase()}` : ' / bundled'}</small></span>
+              </div>
+              <div className="dataset-actions">
+                {importedDataset && (
+                  <label className="dataset-switch">
+                    <span>DATASET</span>
+                    <select aria-label="Active dataset" value={datasetMode} onChange={(event) => switchDataset(event.target.value as 'demo' | 'imported')}>
+                      <option value="demo">Demo</option>
+                      <option value="imported">Imported</option>
+                    </select>
+                    <ChevronDown size={13} />
+                  </label>
+                )}
+                <button className="import-button" disabled={['reading', 'parsing'].includes(marcImport.state.status)} onClick={() => importInput.current?.click()}><Upload size={14} />Import MARC</button>
+                <input
+                  ref={importInput}
+                  className="visually-hidden"
+                  type="file"
+                  accept=".xml,.marcxml,.mrc,.marc,.iso,.iso2709,application/xml,text/xml,application/marc"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void marcImport.importFile(file);
+                    event.target.value = '';
+                  }}
+                  aria-label="MARC file"
+                />
+                {importedDataset && <button className="clear-dataset" title="Remove imported dataset" onClick={clearImportedDataset}><X size={14} /></button>}
+              </div>
+              {['reading', 'parsing'].includes(marcImport.state.status) && (
+                <div className="import-status"><span style={{ width: `${marcImport.state.progress * 100}%` }} /><strong>{marcImport.state.status === 'reading' ? 'Reading file' : `Parsing ${Math.round(marcImport.state.progress * 100)}%`}</strong><button onClick={marcImport.cancel}>Cancel</button></div>
+              )}
+              {marcImport.state.error && <div className="import-message"><AlertCircle size={14} /><strong>{marcImport.state.error.code}</strong><span>{marcImport.state.error.message}</span></div>}
+              {datasetMode === 'imported' && importedDataset && importedDataset.warnings.length > 0 && <div className="import-message warning"><AlertCircle size={14} /><strong>{importedDataset.warnings.length.toLocaleString()} warnings</strong><span>{importedDataset.warnings[0].message}</span></div>}
+            </section>
+          )}
           {workspaceMode === 'learn' && currentLesson && (
             <section className={`lesson-brief ${lessonPassed ? 'passed' : ''}`}>
               <div className="lesson-state">{lessonPassed ? <Check size={16} /> : <BookOpen size={16} />}</div>

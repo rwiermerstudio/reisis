@@ -31,6 +31,17 @@ export function parseRecordJson(source: string): { record?: IsisRecord; error?: 
         throw new Error(`Field ${tag} must be an array of strings.`);
       }
     }
+    if (candidate.marc !== undefined) {
+      const marc = candidate.marc;
+      if (!marc || !['marcxml', 'iso2709'].includes(marc.sourceFormat) || (marc.leader !== undefined && typeof marc.leader !== 'string') || !marc.indicators || typeof marc.indicators !== 'object') {
+        throw new Error('MARC metadata must contain a source format and indicators object.');
+      }
+      for (const [tag, indicators] of Object.entries(marc.indicators)) {
+        if (!/^\d{3}$/.test(tag) || !Array.isArray(indicators) || indicators.some((item) => typeof item !== 'string' || item.length !== 2)) {
+          throw new Error(`MARC indicators for ${tag} must be an array of two-character strings.`);
+        }
+      }
+    }
     return { record: candidate as IsisRecord };
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Invalid JSON record.' };

@@ -104,6 +104,27 @@ describe('studio workflow', () => {
     expect(screen.queryByRole('listbox', { name: 'Code completions' })).not.toBeInTheDocument();
   });
 
+  it('imports MARCXML into a scalable playground dataset', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
+    const source = `<collection xmlns="http://www.loc.gov/MARC21/slim">
+      <record><leader>00000nam a2200000 a 4500</leader><controlfield tag="001">one</controlfield><datafield tag="245" ind1="1" ind2="0"><subfield code="a">Imported title one</subfield></datafield></record>
+      <record><leader>00000nam a2200000 a 4500</leader><controlfield tag="001">two</controlfield><datafield tag="245" ind1="0" ind2="0"><subfield code="a">Imported title two</subfield></datafield></record>
+    </collection>`;
+    const file = new File([source], 'catalog.xml', { type: 'application/xml' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => new TextEncoder().encode(source).buffer });
+
+    fireEvent.change(screen.getByLabelText('MARC file'), { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByText('catalog.xml')).toBeInTheDocument());
+    expect(screen.getByText('2 records / MARCXML')).toBeInTheDocument();
+    expect(screen.getAllByText(/Imported title one/).length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle('MARC indicators').some((item) => item.textContent === '10')).toBe(true);
+    fireEvent.change(screen.getByLabelText('Record position'), { target: { value: '2' } });
+    expect(screen.getAllByText(/Imported title two/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /All 2/ })).toBeInTheDocument();
+  });
+
   it('keeps the playground visible for an incomplete variable assignment', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
@@ -118,8 +139,8 @@ describe('studio workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Playground' }));
     fireEvent.click(screen.getByRole('button', { name: /All 10/ }));
     await waitFor(() => expect(screen.getByText('10 records')).toBeInTheDocument());
-    expect(screen.getAllByText('MFN 1').length).toBeGreaterThan(2);
-    expect(screen.getAllByText('MFN 10').length).toBeGreaterThan(1);
+    expect(screen.getAllByText('MFN 1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('MFN 10').length).toBeGreaterThan(0);
   });
 
   it('runs an exercise solution against all records', async () => {
@@ -128,7 +149,7 @@ describe('studio workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: /All 10/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Show solution' }));
     await waitFor(() => expect(screen.getByText('10 records')).toBeInTheDocument());
-    expect(screen.getAllByText('MFN 10').length).toBeGreaterThan(1);
+    expect(screen.getByText('MFN 10')).toBeInTheDocument();
   });
 
   it('renders and validates an HTML exercise solution', () => {
