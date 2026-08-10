@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABCD/CISIS PFT & FST"
+  short_description: "Create and debug ABCD/CISIS PFT and FST"
+  default_prompt: "Use $abcd-cisis-pft-fst to create or debug an ABCD/CISIS PFT or FST expression."

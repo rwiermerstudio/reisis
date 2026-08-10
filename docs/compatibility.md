@@ -19,8 +19,8 @@ differs from CISIS.
   literals.
 - Conditional literals are suppressed when their adjacent associated field is
   absent. Double-quoted literals emit only for group occurrence 1; pipe literals
-  emit for every present occurrence. Prefix/suffix `+` suppression is not yet
-  supported.
+  emit for every present occurrence. Leading/trailing `+` modifiers suppress a
+  repeatable literal after the last or before the first group occurrence.
 - `/` emits a newline only when output is not already at the beginning of a line.
 - `#` emits an unconditional newline and `%` removes trailing blank lines.
 - `xN` inserts N spaces. `cN` advances to one-based column N or starts a new
@@ -84,7 +84,7 @@ differs from CISIS.
 - WXIS IsisScript (`.xis`) elements such as `<pft>`, `<display>`, and `<htmlpft>`
 - Stop-word tables, configurable alphabet/uppercase tables, posting data, and
   Lucene integration
-- MST/XRF persistence and ISO 2709/MARC import
+- MST/XRF persistence and non-ASCII MARC-8 decoding
 
 Unsupported syntax is an error rather than a compatibility approximation.
 

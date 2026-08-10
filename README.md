@@ -67,3 +67,10 @@ The HTML exercise security model and supported markup are documented in
 
 MARC import formats, limits, and CISIS field mapping are documented in
 `docs/marc-import.md`.
+
+## AI skill
+
+The portable `skills/abcd-cisis-pft-fst` skill teaches compatible language-model
+agents to create, explain, review, and debug ABCD/CISIS PFT and FST code. Invoke
+it as `$abcd-cisis-pft-fst` in clients that support Agent Skills, or provide its
+`SKILL.md` and focused references as context to another language model.
