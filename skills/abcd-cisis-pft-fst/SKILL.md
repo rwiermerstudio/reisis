@@ -41,6 +41,7 @@ Create correct, readable ABCD/CISIS formatting and indexing code from natural-la
 6. Add layout, modes, functions, and control flow only after field/repetition behavior is correct.
 7. Balance all delimiters and terminators: quotes, pipes, comments, parentheses, `fi`, and `endsel`.
 8. Dry-run the final format occurrence by occurrence. Check punctuation and newlines at missing and final occurrences.
+9. For `proc()`, generate all `D` commands before `A` or `H` commands and explain that changes affect the current format evaluation.
 
 ## Create FST code
 
@@ -94,6 +95,6 @@ Keep commas and spacing readable. Add `/* ... */` comments only when they preser
 ## Compatibility boundaries
 
 - Treat the bundled reference as a verified ABCD/CISIS core, not a claim of complete CISIS, WXIS, WinISIS, or J-ISIS support.
-- Do not fabricate semantics for `ref()`, `l()`, `cat()`, `proc()`, `system()`, `@include`, external tables, postings, or IsisScript.
+- Use only the documented `D`, `A`, and `H` subset of `proc()`. Do not fabricate semantics for database/file PROC extensions, `ref()`, `l()`, `cat()`, `system()`, `@include`, external tables, postings, or IsisScript.
 - Distinguish PFT-produced HTML from WXIS IsisScript. Keep conditional HTML balanced and recommend sanitization in browser contexts.
 - State when a requested feature lies outside the references and ask for runtime documentation or a working example.

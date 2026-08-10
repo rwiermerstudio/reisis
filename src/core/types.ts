@@ -123,6 +123,11 @@ export interface WhileNode extends BaseNode {
   children: AstNode[];
 }
 
+export interface ProcNode extends BaseNode {
+  type: 'proc';
+  children: AstNode[];
+}
+
 export interface SelectNode extends BaseNode {
   type: 'select';
   expression: CisisExpression;
@@ -138,7 +143,7 @@ export type CisisExpression =
   | { type: 'unary'; operator: 'not' | '-' | '+'; operand: CisisExpression }
   | { type: 'binary'; operator: string; left: CisisExpression; right: CisisExpression };
 
-export type AstNode = FieldNode | DummyNode | LiteralNode | NewlineNode | LayoutNode | CommentNode | SystemNode | ExpressionNode | ControlNode | ModeNode | AssignmentNode | VariableNode | WhileNode | SelectNode | GroupNode | ConditionalNode;
+export type AstNode = FieldNode | DummyNode | LiteralNode | NewlineNode | LayoutNode | CommentNode | SystemNode | ExpressionNode | ControlNode | ModeNode | AssignmentNode | VariableNode | WhileNode | ProcNode | SelectNode | GroupNode | ConditionalNode;
 
 export interface ParseResult {
   ast: ProgramNode;
@@ -147,7 +152,7 @@ export interface ParseResult {
 
 export interface TraceEvent extends SourceSpan {
   id: number;
-  kind: 'field' | 'literal' | 'layout' | 'group' | 'condition' | 'function' | 'comment' | 'control';
+  kind: 'field' | 'literal' | 'layout' | 'group' | 'condition' | 'function' | 'comment' | 'control' | 'proc';
   label: string;
   detail: string;
   output: string;

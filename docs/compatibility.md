@@ -55,6 +55,15 @@ differs from CISIS.
 - `select/case/elsecase/endsel` provides typed multi-branch control.
 - WinISIS-compatible `e0..e9`, `s0..s9`, assignments, and
   `while condition (format)` are supported. WHILE is capped at 1,000 iterations.
+- `proc(format)` evaluates its argument as PFT and applies the generated `D`,
+  `A`, and `H` field-update commands to a format-local copy of the current
+  record. Later expressions in that evaluation see the updates; source and
+  imported records are never persisted or mutated.
+- PROC supports `d*`, `d<tag>`, `d<tag>/<occurrence>`,
+  `a<tag><delimiter><value><delimiter>`, and `h<tag> <utf8-bytes> <value>`.
+  All deletes must precede additions. The complete command stream is validated
+  before it is applied, so a malformed update produces `PFT_PROC` with no
+  partial field changes.
 - `p(field)` is true when the selected value is non-empty.
 - `a(field)` is the inverse of `p(field)`.
 - Commas and unquoted whitespace separate expressions and do not emit text.
@@ -77,7 +86,8 @@ differs from CISIS.
 
 - External mode/character conversion tables and byte-oriented slicing semantics
 - File and database operations including `@include`, `ref()`, `l()`, `cat()`,
-  `proc()`, `system()`, and environment functions
+  `system()`, environment functions, and PROC extensions that read other
+  records, files, or databases
 - Format-valued `s()` arguments containing arbitrary nested PFT control blocks;
   this milestone accepts expression values and nested pure functions
 - Unbounded WHILE execution and Pascal format exits

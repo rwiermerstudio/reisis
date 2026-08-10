@@ -59,7 +59,7 @@ function sourceLocation(source: string, offset: number): string {
 
 function highlightedCode(source: string, mode: LessonMode): ReactNode[] {
   const pattern = mode === 'pft'
-    ? /(\/\*[\s\S]*?\*\/|\b(?:if|then|else|fi|and|or|not|break|continue|select|case|elsecase|endsel|while|p|a|mfn|iocc|nocc|size|instr|val|left|right|mid|replace|f|s|date|rsum|rmin|rmax|ravr|mpl|mpu|mhl|mhu|mdl|mdu|lw)\b|[es]\d|[dn]\d+(?:\^[a-z0-9])?|v\d+(?:\^[a-z0-9])?(?:\[(?:\d+|last)(?:\.\.(?:\d+|last)?)?\])?(?:\*\d+(?:\.\d+)?)?|"[^"]*"|'[^']*'|\|[^|]*\||[xc]\d+|:=|>=|<=|<>|!=|[=<>+*\-]|[\/#%:]|[()])/gi
+    ? /(\/\*[\s\S]*?\*\/|\b(?:if|then|else|fi|and|or|not|break|continue|select|case|elsecase|endsel|while|proc|p|a|mfn|iocc|nocc|size|instr|val|left|right|mid|replace|f|s|date|rsum|rmin|rmax|ravr|mpl|mpu|mhl|mhu|mdl|mdu|lw)\b|[es]\d|[dn]\d+(?:\^[a-z0-9])?|v\d+(?:\^[a-z0-9])?(?:\[(?:\d+|last)(?:\.\.(?:\d+|last)?)?\])?(?:\*\d+(?:\.\d+)?)?|"[^"]*"|'[^']*'|\|[^|]*\||[xc]\d+|:=|>=|<=|<>|!=|[=<>+*\-]|[\/#%:]|[()])/gi
     : /(^\s*\d+)(\s+)(\d+)|((?:v\d+(?:\^[a-z0-9])?(?:\[\d+\])?))|("[^"]*"|'[^']*'|\|[^|]*\|)|(#.*$)/gim;
   const parts: ReactNode[] = [];
   let last = 0;
@@ -72,7 +72,7 @@ function highlightedCode(source: string, mode: LessonMode): ReactNode[] {
     else if (/^["'|]/.test(value)) className = 'syntax-literal';
     else if (/^\/\*/.test(value)) className = 'syntax-comment';
     else if (/^\d/.test(value)) className = mode === 'fst' ? 'syntax-number' : className;
-    else if (/^(if|then|else|fi|and|or|not|break|continue|select|case|elsecase|endsel|while|p|a|mfn|iocc|nocc|size|instr|val|left|right|mid|replace|f|s|date|rsum|rmin|rmax|ravr|mpl|mpu|mhl|mhu|mdl|mdu|lw)$/i.test(value)) className = 'syntax-keyword';
+    else if (/^(if|then|else|fi|and|or|not|break|continue|select|case|elsecase|endsel|while|proc|p|a|mfn|iocc|nocc|size|instr|val|left|right|mid|replace|f|s|date|rsum|rmin|rmax|ravr|mpl|mpu|mhl|mhu|mdl|mdu|lw)$/i.test(value)) className = 'syntax-keyword';
     if (className === 'syntax-literal' && /<\/?[a-z]/i.test(value)) {
       const literalParts = value.split(/(<\/?[a-z][^>]*>)/gi);
       parts.push(<span className={className} key={`${index}-${value}`}>{literalParts.map((part, partIndex) =>
@@ -341,6 +341,7 @@ function buildCompletions(mode: LessonMode, record?: IsisRecord): CompletionItem
     add({ label: 'numeric variable', insert: 'e0:=1', detail: 'Assign WinISIS variable', kind: 'snippet' });
     add({ label: 'while', insert: 'e0:=1,while e0<=3(e0,e0:=e0+1)', detail: 'Bounded variable loop', kind: 'snippet' });
     add({ label: 'select', insert: "select nocc(v650) case 0:'none' case 1:'one' elsecase 'many' endsel", detail: 'Multi-branch control', kind: 'snippet' });
+    add({ label: 'proc()', insert: "proc('d999',|a999#|v245^a|#|)", detail: 'Update the format-local record', kind: 'keyword' });
     add({ label: '<article>', insert: "'<article></article>'", detail: 'Semantic record container', kind: 'snippet' });
     add({ label: '<h2>', insert: "'<h2></h2>'", detail: 'Section heading', kind: 'snippet' });
     add({ label: '<p>', insert: "'<p></p>'", detail: 'Paragraph', kind: 'snippet' });

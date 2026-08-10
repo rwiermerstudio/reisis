@@ -239,3 +239,43 @@ describe('ABCD/CISIS milestone 4 formatting and extended control', () => {
     expect(evaluatePft("(v700^a,':',(| |v650^a),/)", record).output).toContain('Weaver, William: Monastic libraries Italy');
   });
 });
+
+describe('ABCD/CISIS PROC field updates', () => {
+  const record = records[0];
+
+  it('generates updates from a format and exposes added fields to later selectors', () => {
+    const result = evaluatePft("proc('d999',|a999#|v245^a|#|),v999", record);
+    expect(result.output).toBe('The name of the rose');
+    expect(result.diagnostics).toHaveLength(0);
+  });
+
+  it('appends A occurrences and deletes a one-based occurrence', () => {
+    expect(evaluatePft("proc('a999#first#a999#second#'),(v999+|; |)", record).output).toBe('first; second');
+    expect(evaluatePft("proc('d650/1'),(v650^a,/)", record).output).toBe('Italy\n');
+  });
+
+  it('supports H updates with UTF-8 byte lengths', () => {
+    expect(evaluatePft("proc('h999 5 caf\u00e9'),v999", record).output).toBe('caf\u00e9');
+  });
+
+  it('supports deleting the complete working record before adding replacement fields', () => {
+    expect(evaluatePft("proc('d*a999|replacement|'),nocc(v245),'|',v999", record).output).toBe('0|replacement');
+  });
+
+  it('does not mutate the caller record', () => {
+    const before = structuredClone(record.fields);
+    evaluatePft("proc('d245a999#temporary#'),v999", record);
+    expect(record.fields).toEqual(before);
+  });
+
+  it('rejects malformed updates atomically', () => {
+    const result = evaluatePft("proc('a999#temporary#d245'),v245^a,'|',v999", record);
+    expect(result.output).toBe('The name of the rose|');
+    expect(result.diagnostics.some((item) => item.code === 'PFT_PROC')).toBe(true);
+  });
+
+  it('reports an unterminated PROC format', () => {
+    expect(parsePft("proc('d245')").diagnostics).toHaveLength(0);
+    expect(parsePft("proc('d245'").diagnostics.some((item) => item.code === 'PFT_PROC')).toBe(true);
+  });
+});

@@ -76,6 +76,16 @@ elsecase 'Multiple subjects'
 endsel
 ```
 
+### Temporary derived field
+
+```pft
+proc('d999', |a999#|, v245^a, |#|),
+v999
+```
+
+This replaces field 999 in the current evaluation only. It does not save the
+derived field to the database.
+
 ### Balanced HTML card
 
 ```pft

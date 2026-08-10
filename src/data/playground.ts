@@ -92,6 +92,14 @@ export const playgroundPresets: PlaygroundPreset[] = [
     source: "s0:=('Subjects: '),s0,nocc(v650),/,e0:=1,while e0<=nocc(v650)(e0,|. |v650^a,/,e0:=e0+1),select nocc(v650) case 3:'Complete set' elsecase 'Other count' endsel",
   },
   {
+    id: 'temporary-update',
+    title: 'Temporary record update',
+    description: 'Delete, add, and read fields with PROC',
+    mode: 'pft',
+    recordMfn: 1,
+    source: "proc('d999',|a999#|v245^a|#|),v999",
+  },
+  {
     id: 'title-index',
     title: 'Title word index',
     description: 'Technique 4 over title and subtitle',
@@ -139,6 +147,7 @@ export const quickInserts: Array<{ label: string; detail: string; mode: LessonMo
   { label: 'Comparison', detail: 'Numeric year condition', mode: 'pft', source: "if val(v260^c) < 2000 then 'Older' fi", group: 'advanced' },
   { label: 'Text function', detail: 'Shorten the title', mode: 'pft', source: 'left(v245^a,20)', group: 'advanced' },
   { label: 'Break group', detail: 'Limit repeat output', mode: 'pft', source: 'if iocc > 3 then break fi', group: 'advanced' },
+  { label: 'Temporary update', detail: 'Replace field 999 during evaluation', mode: 'pft', source: "proc('d999','a999|temporary value|'),v999", group: 'advanced' },
   { label: 'Exact term row', detail: 'Technique 0', mode: 'fst', source: '10 0 v20', group: 'common' },
   { label: 'Word term row', detail: 'Technique 4', mode: 'fst', source: '20 4 v245^a', group: 'common' },
   { label: 'Subfield row', detail: 'Technique 1', mode: 'fst', source: '20 1 v245', group: 'common' },

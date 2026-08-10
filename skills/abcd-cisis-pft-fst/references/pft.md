@@ -8,8 +8,9 @@
 4. Functions and system values
 5. Layout and modes
 6. Variables and control flow
-7. HTML output
-8. Unsupported or uncertain features
+7. Format-local record updates
+8. HTML output
+9. Unsupported or uncertain features
 
 ## Composition and selectors
 
@@ -196,6 +197,29 @@ endsel
 
 Inside repeatable groups, `break` stops iteration and `continue` advances to the next occurrence.
 
+## Format-local record updates
+
+`proc(format)` evaluates its argument as a format that generates field-update
+commands. Deletes must come before additions. Later expressions in the same
+format evaluation read the updated fields.
+
+| Command | Effect |
+|---|---|
+| `d*` | Delete every field |
+| `d245` | Delete every occurrence of field 245 |
+| `d650/2` | Delete the second occurrence of field 650 |
+| `a999#value#` | Append `value` to field 999; any non-numeric delimiter may replace `#` |
+| `h999 5 value` | Append exactly five UTF-8 bytes to field 999 |
+
+```pft
+proc('d999', |a999#|, v245^a, |#|),
+v999
+```
+
+The browser interpreter applies updates to a temporary copy. It does not alter
+the loaded dataset or IndexedDB. A malformed command rejects the complete PROC
+update rather than applying only a prefix.
+
 ## HTML output
 
 Compose markup with literals and keep tags balanced across every conditional path.
@@ -210,6 +234,6 @@ Do not confuse generated HTML with WXIS IsisScript. Recommend sanitizing PFT-pro
 
 ## Unsupported or uncertain features
 
-The verified core does not establish behavior for external conversion tables, byte-oriented slicing, `@include`, `ref()`, `l()`, `cat()`, `proc()`, `system()`, environment/file operations, arbitrary format-valued nested control inside `s()`, Pascal exits, or WXIS IsisScript elements.
+The verified core does not establish behavior for external conversion tables, byte-oriented slicing, `@include`, `ref()`, `l()`, `cat()`, database/file PROC extensions, `system()`, environment/file operations, arbitrary format-valued nested control inside `s()`, Pascal exits, or WXIS IsisScript elements.
 
 Do not guess these semantics. Ask for target-runtime documentation or give a verified-core alternative.

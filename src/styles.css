@@ -241,6 +241,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .trace-dot.literal { background: #c37827; }
 .trace-dot.condition { background: #a24f70; }
 .trace-dot.group { background: #527ab1; }
+.trace-dot.proc { background: #704f99; }
 .trace-row strong { display: block; font: 600 10px var(--mono); }
 .trace-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
 .trace-row code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #405047; font: 9px var(--mono); text-align: right; }

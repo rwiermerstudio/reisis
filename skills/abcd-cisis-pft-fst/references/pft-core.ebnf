@@ -3,7 +3,7 @@
 program         = { separator | expression } ;
 expression      = field | dummy | literal | layout | mode | system_value |
                   function | variable | assignment | comment | control |
-                  group | conditional | select | while ;
+                  group | conditional | select | while | proc ;
 
 field           = ( "v" | "V" ), tag, [ subfield ], [ occurrence ],
                   [ extraction ], [ indentation ] ;
@@ -41,6 +41,7 @@ control         = "break" | "continue" ;
 variable        = ( "e" | "s" ), digit ;
 assignment      = variable, ":=", ( boolean_expression | "(", sequence, ")" ) ;
 while           = "while", boolean_expression, "(", sequence, ")" ;
+proc            = "proc", "(", sequence, ")" ;
 select          = "select", boolean_expression,
                   { "case", primary, ":", sequence },
                   [ "elsecase", sequence ], "endsel" ;

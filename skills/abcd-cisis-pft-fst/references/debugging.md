@@ -74,6 +74,7 @@ Debug from structure outward. Do not rewrite the whole format before finding the
 | `PFT_WHILE` | Missing condition/body or closing `)` | Use `while condition (format)` |
 | `PFT_WHILE_LIMIT` | Loop did not terminate within 1,000 iterations | Ensure the body updates the condition variable |
 | `PFT_SELECT` | Missing case, colon, or `endsel` | Complete the select structure |
+| `PFT_PROC` | Malformed field-update command or delete after an addition | Use valid D/A/H commands and put every delete first |
 | `FST_ROW` | Row lacks target, technique, or PFT | Use `20 4 v245^a` |
 | `FST_TECHNIQUE` | Technique outside 0 through 8 | Choose a supported technique |
 | `FST_PREFIX` | Technique 5-8 lacks wrapped prefix | Start output with a value such as `'|TI_|'` |

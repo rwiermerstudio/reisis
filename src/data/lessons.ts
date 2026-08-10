@@ -86,6 +86,7 @@ export const lessons: Lesson[] = [
   { id: 69, section: 'Extended Control', title: 'While loop', mode: 'pft', recordMfn: 1, brief: 'Repeat a format while updating its numeric variable.', focus: 'while', starter: 'e0:=1,e0', solution: "e0:=1,while e0<=3(e0,if e0<3 then ',' fi,e0:=e0+1)", expected: ['1,2,3'] },
   { id: 70, section: 'Extended Control', title: 'Select branch', mode: 'pft', recordMfn: 1, brief: 'Choose a CASE using an expression value.', focus: 'select/case', starter: 'nocc(v650)', solution: "select nocc(v650) case 0:'none' case 1:'one' case 2:'two subjects' elsecase 'many' endsel", expected: ['two subjects'] },
   { id: 71, section: 'Extended Control', title: 'Nested repetition', mode: 'pft', recordMfn: 4, brief: 'Evaluate an independent repeatable group inside another.', focus: 'Nested groups', starter: '(v700^a,/)', solution: "(v700^a,':',(| |v650^a),/)", expected: ['Jones, Vivien: Courtship Social classes', 'Tanner, Tony: Courtship Social classes'] },
+  { id: 72, section: 'Record Updates', title: 'Temporary field update', mode: 'pft', recordMfn: 1, brief: 'Generate PROC commands that update the current format evaluation.', focus: 'proc() with D and A', starter: 'v999', solution: "proc('d999',|a999#|v245^a|#|),v999", expected: ['The name of the rose'] },
 ];
 
 export const lessonModules = [
@@ -94,7 +95,7 @@ export const lessonModules = [
   { id: 'layout', title: 'Output & Layout', sections: ['CISIS Commands'] },
   { id: 'selectors', title: 'Modes & Selectors', sections: ['Modes', 'Advanced Selectors'] },
   { id: 'expressions', title: 'Expressions & Functions', sections: ['Expressions', 'Functions', 'Format Functions'] },
-  { id: 'control', title: 'Control Flow', sections: ['Control Flow', 'Extended Control'] },
+  { id: 'control', title: 'Control Flow', sections: ['Control Flow', 'Extended Control', 'Record Updates'] },
   { id: 'html', title: 'HTML Output', sections: ['HTML'] },
   { id: 'fst', title: 'FST Indexing', sections: ['Indexing', 'FST Techniques'] },
 ] as const;

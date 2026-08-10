@@ -45,6 +45,7 @@ class Parser {
       else if (this.atKeyword('if')) nodes.push(this.parseConditional());
       else if (this.atKeyword('select')) nodes.push(this.parseSelect());
       else if (this.atKeyword('while')) nodes.push(this.parseWhile());
+      else if (this.atKeyword('proc')) nodes.push(this.parseProc());
       else if (/^m[pdh][lu]/i.test(this.source.slice(this.position))) nodes.push(this.parseMode());
       else if (this.atKeyword('lw') && this.source[this.position + 2] === '(') nodes.push(this.parseLineWidth());
       else if (this.atKeyword('mfn')) nodes.push(this.parseMfn());
@@ -367,6 +368,21 @@ class Parser {
     return { type: 'while', condition: parsed.expression, children, id: this.id++, start, end: this.position };
   }
 
+  private parseProc(): AstNode {
+    const start = this.position;
+    this.consumeKeyword('proc');
+    this.skipSeparators();
+    if (this.source[this.position] !== '(') {
+      this.error(start, this.position, 'PROC expects a parenthesized field-update format.', 'PFT_PROC');
+      return { type: 'proc', children: [], id: this.id++, start, end: this.position };
+    }
+    this.position++;
+    const children = this.parseSequence([')']);
+    if (this.source[this.position] === ')') this.position++;
+    else this.error(start, this.position, 'PROC is missing a closing parenthesis.', 'PFT_PROC');
+    return { type: 'proc', children, id: this.id++, start, end: this.position };
+  }
+
   private findLastTopLevelOpen(start: number): number {
     let depth = 0;
     let quote = '';
@@ -505,6 +521,101 @@ function fieldsIn(nodes: AstNode[]): FieldNode[] {
   });
 }
 
+type FieldUpdate =
+  | { kind: 'delete-all' }
+  | { kind: 'delete'; tag: string; occurrence?: number }
+  | { kind: 'add'; tag: string; value: string };
+
+function parseFieldUpdates(source: string): { updates: FieldUpdate[]; error?: string } {
+  const updates: FieldUpdate[] = [];
+  let position = 0;
+  let hasAddition = false;
+  const skipWhitespace = () => { while (/\s/.test(source[position] ?? '')) position++; };
+  const readTag = () => {
+    const start = position;
+    while (/\d/.test(source[position] ?? '')) position++;
+    return source.slice(start, position);
+  };
+
+  while (position < source.length) {
+    skipWhitespace();
+    if (position >= source.length) break;
+    const command = source[position++].toLowerCase();
+    if (command === 'd') {
+      if (hasAddition) return { updates: [], error: 'Delete commands must precede all A and H commands.' };
+      if (source[position] === '*') {
+        position++;
+        updates.push({ kind: 'delete-all' });
+        continue;
+      }
+      const tag = readTag();
+      if (!tag) return { updates: [], error: 'D requires a numeric field tag or *.' };
+      let occurrence: number | undefined;
+      if (source[position] === '/') {
+        position++;
+        const start = position;
+        while (/\d/.test(source[position] ?? '')) position++;
+        occurrence = Number(source.slice(start, position));
+        if (!Number.isInteger(occurrence) || occurrence < 1) return { updates: [], error: `D${tag}/ requires a one-based occurrence number.` };
+      }
+      updates.push({ kind: 'delete', tag, occurrence });
+      continue;
+    }
+    if (command !== 'a' && command !== 'h') return { updates: [], error: `Unknown field-update command "${source[position - 1]}".` };
+    hasAddition = true;
+    const tag = readTag();
+    if (!tag) return { updates: [], error: `${command.toUpperCase()} requires a numeric field tag.` };
+    if (command === 'a') {
+      const delimiter = source[position++];
+      if (!delimiter || /\d/.test(delimiter)) return { updates: [], error: `A${tag} requires a non-numeric delimiter.` };
+      const end = source.indexOf(delimiter, position);
+      if (end < 0) return { updates: [], error: `A${tag} is missing its closing ${delimiter} delimiter.` };
+      updates.push({ kind: 'add', tag, value: source.slice(position, end) });
+      position = end + 1;
+      continue;
+    }
+
+    if (!/\s/.test(source[position] ?? '')) return { updates: [], error: `H${tag} requires a byte length separated by a space.` };
+    skipWhitespace();
+    const lengthStart = position;
+    while (/\d/.test(source[position] ?? '')) position++;
+    const byteLength = Number(source.slice(lengthStart, position));
+    if (!Number.isInteger(byteLength) || position === lengthStart) return { updates: [], error: `H${tag} requires a non-negative byte length.` };
+    if (!/\s/.test(source[position] ?? '')) return { updates: [], error: `H${tag} requires a space before its value.` };
+    position++;
+    const valueStart = position;
+    let consumedBytes = 0;
+    while (position < source.length && consumedBytes < byteLength) {
+      const character = String.fromCodePoint(source.codePointAt(position)!);
+      const characterBytes = new TextEncoder().encode(character).length;
+      if (consumedBytes + characterBytes > byteLength) return { updates: [], error: `H${tag} byte length splits a UTF-8 character.` };
+      consumedBytes += characterBytes;
+      position += character.length;
+    }
+    if (consumedBytes !== byteLength) return { updates: [], error: `H${tag} declares ${byteLength} bytes but its value is shorter.` };
+    updates.push({ kind: 'add', tag, value: source.slice(valueStart, position) });
+  }
+  return { updates };
+}
+
+function applyFieldUpdates(record: IsisRecord, updates: FieldUpdate[]): void {
+  for (const update of updates) {
+    if (update.kind === 'delete-all') {
+      record.fields = {};
+    } else if (update.kind === 'delete') {
+      if (update.occurrence === undefined) delete record.fields[update.tag];
+      else {
+        const values = record.fields[update.tag];
+        if (!values) continue;
+        values.splice(update.occurrence - 1, 1);
+        if (values.length === 0) delete record.fields[update.tag];
+      }
+    } else {
+      (record.fields[update.tag] ??= []).push(update.value);
+    }
+  }
+}
+
 export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, includeTrace = true): EvaluationResult {
   const trace: TraceEvent[] = [];
   const segments: OutputSegment[] = [];
@@ -514,6 +625,15 @@ export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, inclu
   let displayMode: 'proof' | 'heading' | 'data' = 'proof';
   let uppercase = false;
   let lineWidth = Number.POSITIVE_INFINITY;
+  let workingRecord = record;
+  const ensureWorkingRecord = () => {
+    if (workingRecord !== record) return;
+    workingRecord = {
+      ...record,
+      fields: Object.fromEntries(Object.entries(record.fields).map(([tag, values]) => [tag, [...values]])),
+      marc: record.marc ? { ...record.marc, indicators: Object.fromEntries(Object.entries(record.marc.indicators).map(([tag, values]) => [tag, [...values]])) } : undefined,
+    };
+  };
   const variables = new Map<string, string | number>();
   for (let index = 0; index < 10; index++) { variables.set(`e${index}`, 0); variables.set(`s${index}`, ''); }
   const BREAK = Symbol('break');
@@ -541,7 +661,7 @@ export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, inclu
   };
 
   const rawFieldValue = (field: FieldNode, occurrence: number | undefined): string => {
-    const values = fieldOccurrences(record, field.tag);
+    const values = fieldOccurrences(workingRecord, field.tag);
     let selectedValues: string[];
     if (occurrence !== undefined && field.occurrence === undefined && field.occurrenceEnd === undefined) selectedValues = [values[occurrence - 1] ?? ''];
     else if (field.occurrenceEnd !== undefined) {
@@ -567,7 +687,7 @@ export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, inclu
     return value;
   };
 
-  const expressionContext = (occurrence: number | undefined) => ({ record, occurrence, variables, fieldResolver: (field: FieldNode) => transformField(field, occurrence) });
+  const expressionContext = (occurrence: number | undefined) => ({ record: workingRecord, occurrence, variables, fieldResolver: (field: FieldNode) => transformField(field, occurrence) });
 
   const associatedPresence = (nodes: AstNode[], index: number, occurrence: number | undefined): boolean => {
     for (let next = index + 1; next < nodes.length; next++) {
@@ -654,10 +774,10 @@ export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, inclu
     if (node.type === 'system') {
       let value = '';
       let label = node.kind.toUpperCase();
-      if (node.kind === 'mfn') value = String(record.mfn).padStart(node.width ?? 0, '0');
+      if (node.kind === 'mfn') value = String(workingRecord.mfn).padStart(node.width ?? 0, '0');
       else if (node.kind === 'iocc') value = String(occurrence ?? 0);
       else if (node.field) {
-        const values = fieldOccurrences(record, node.field.tag);
+        const values = fieldOccurrences(workingRecord, node.field.tag);
         value = String(node.field.subfield ? values.filter((item) => subfieldValue(item, node.field!.subfield!).length > 0).length : values.length);
         label = `NOCC v${node.field.tag}${node.field.subfield ? `^${node.field.subfield}` : ''}`;
       }
@@ -669,6 +789,34 @@ export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, inclu
       const value = String(evaluateCisisExpression(node.expression, expressionContext(occurrence)));
       emit(node, 'function', node.expression.type === 'call' ? `${node.expression.name}()` : 'Expression', `Returned ${value}.`, value, depth);
       append(node, 'system', value);
+      return;
+    }
+    if (node.type === 'proc') {
+      const previousOutput = output;
+      const previousSegmentCount = segments.length;
+      const previousLineWidth = lineWidth;
+      let commands = '';
+      output = '';
+      lineWidth = Number.POSITIVE_INFINITY;
+      try {
+        evaluateNodes(node.children, occurrence, depth + 1, groupCount);
+        commands = output;
+      } finally {
+        output = previousOutput;
+        segments.splice(previousSegmentCount);
+        lineWidth = previousLineWidth;
+      }
+      const parsedUpdates = parseFieldUpdates(commands);
+      if (parsedUpdates.error) {
+        runtimeDiagnostics.push({ start: node.start, end: node.end, severity: 'error', code: 'PFT_PROC', message: parsedUpdates.error });
+        emit(node, 'proc', 'PROC', `Rejected field updates: ${parsedUpdates.error}`, '', depth);
+      } else {
+        if (parsedUpdates.updates.length > 0) {
+          ensureWorkingRecord();
+          applyFieldUpdates(workingRecord, parsedUpdates.updates);
+        }
+        emit(node, 'proc', 'PROC', `Applied ${parsedUpdates.updates.length} field update${parsedUpdates.updates.length === 1 ? '' : 's'} to the format-local record.`, '', depth);
+      }
       return;
     }
     if (node.type === 'control') {
@@ -717,7 +865,7 @@ export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, inclu
       return;
     }
     if (node.type === 'field') {
-      const values = fieldOccurrences(record, node.tag);
+      const values = fieldOccurrences(workingRecord, node.tag);
       const selected = node.occurrence ?? occurrence ?? 1;
       let value = transformField(node, occurrence);
       if (node.indentFirst !== undefined && output.length - output.lastIndexOf('\n') - 1 === 0) {
@@ -738,7 +886,7 @@ export function evaluateParsedPft(parsed: ParseResult, record: IsisRecord, inclu
     }
     if (node.type === 'group') {
       const candidates = fieldsIn(node.children).filter((field) => field.occurrence === undefined);
-      const count = Math.max(0, ...candidates.map((field) => fieldOccurrences(record, field.tag).length));
+      const count = Math.max(0, ...candidates.map((field) => fieldOccurrences(workingRecord, field.tag).length));
       emit(node, 'group', 'Repeatable group', `${count} iteration${count === 1 ? '' : 's'}.`, '', depth);
       for (let childIndex = 0; childIndex < count; childIndex++) {
         try {
